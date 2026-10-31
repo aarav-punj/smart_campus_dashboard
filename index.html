@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart-Campus Energy &amp; Water Dashboard</title>
+<style>
+body{font-family:system-ui,Segoe UI,Arial,sans-serif;margin:0;background:#f4f7f5;color:#1d2b24}
+header{background:#1f4e3d;color:#fff;padding:14px 20px}header h1{margin:0;font-size:20px}header small{opacity:.85}
+main{max-width:980px;margin:0 auto;padding:16px}
+.bar,.cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:center}
+.card{flex:1 1 150px;background:#fff;border:1px solid #d5ddd8;border-radius:8px;padding:10px 12px;font-size:13px}.card b{display:block;font-size:20px}
+select,button{padding:7px 10px;border:1px solid #9fb0a7;border-radius:6px;background:#fff;font-size:14px}button{cursor:pointer}
+button.p{background:#1f4e3d;color:#fff;border-color:#1f4e3d}
+.tag{background:#ffe08a;color:#5a4300;padding:3px 8px;border-radius:10px;font-size:12px;font-weight:600}
+section{background:#fff;border:1px solid #d5ddd8;border-radius:8px;padding:12px;margin-bottom:14px;overflow-x:auto}
+h2{font-size:16px;margin:0 0 8px}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid #e3e9e5;padding:6px;text-align:left;vertical-align:top}tr.done{opacity:.5}
+</style></head><body>
+<header><h1>Smart-Campus Energy &amp; Water Dashboard</h1><small>Meter logging, anomaly alerts and suggested actions | Milestone 2 prototype</small></header>
+<main>
+<div class="bar">
+<label>Block <select id="blk"></select></label>
+<label>Utility <select id="utl"><option value="e">Electricity (kWh)</option><option value="w">Water (litres)</option></select></label>
+<button class="p" id="regen">New random sample</button>
+<label>Upload CSV <input type="file" id="file" accept=".csv"></label>
+<span class="tag" id="src"></span></div>
+<div class="cards" id="cards"></div>
+<section><h2 id="ct"></h2><svg id="chart" viewBox="0 0 760 230" width="100%"></svg></section>
+<section><h2>Alerts</h2><table id="al"></table></section>
+<section id="ev"></section>
+</main>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const U = { e: ['Electricity', 'kWh', '#c77d00'], w: ['Water', 'L', '#1f6fb2'] };
+const key = a => a.block + '|' + a.util + '|' + a.start;
+let rows, alerts, done = {}, sim = true;
+function load(r, s) {
+  rows = r; sim = s; done = {}; alerts = Engine.detect(rows);
+  const names = [...new Set(rows.map(x => x.block))], cur = $('blk').value;
+  $('blk').innerHTML = names.map(n => `<option>${n}</option>`).join('');
+  if (names.includes(cur)) $('blk').value = cur;
+  render();
+}
+function chart(s, u, b) {
+  const W = 760, H = 230, L = 46, R = 10, T = 10, B = 28, n = s.length;
+  const mx = Math.max(...s.map(x => x[u])) * 1.1 || 1;
+  const X = i => L + (W - L - R) * i / Math.max(n - 1, 1), Y = v => T + (H - T - B) * (1 - v / mx);
+  let g = '';
+  alerts.filter(a => a.block === b && a.util === u).forEach(a => g += `<rect x="${X(a.start)}" y="${T}" width="${Math.max(X(a.end) - X(a.start), 3)}" height="${H - T - B}" fill="#d64545" opacity=".25"/>`);
+  [0, .5, 1].forEach(f => g += `<line x1="${L}" x2="${W - R}" y1="${Y(mx * f)}" y2="${Y(mx * f)}" stroke="#e3e9e5"/><text x="${L - 4}" y="${Y(mx * f) + 4}" font-size="11" text-anchor="end" fill="#555">${Math.round(mx * f)}</text>`);
+  s.forEach((x, i) => { if (i % 24 === 0) g += `<text x="${X(i)}" y="${H - 10}" font-size="10" fill="#555">${x.ts.slice(5, 10)}</text>`; });
+  return g + `<polyline fill="none" stroke="${U[u][2]}" stroke-width="1.5" points="${s.map((x, i) => X(i) + ',' + Y(x[u])).join(' ')}"/>`;
+}
+function render() {
+  const b = $('blk').value, u = $('utl').value, s = rows.filter(x => x.block === b).sort((p, q) => p.ts < q.ts ? -1 : 1);
+  $('src').textContent = sim ? 'SIMULATED DATA (not real campus readings)' : 'Uploaded data';
+  const sum = k => Math.round(s.reduce((t, x) => t + x[k], 0)).toLocaleString();
+  $('cards').innerHTML = `<div class="card">Electricity, ${b}<b>${sum('e')} kWh</b></div><div class="card">Water, ${b}<b>${sum('w')} L</b></div><div class="card">Open alerts (all blocks)<b>${alerts.filter(a => !done[key(a)]).length}</b></div>`;
+  $('ct').textContent = `${b}: hourly ${U[u][0].toLowerCase()} use (red = alert period)`;
+  $('chart').innerHTML = chart(s, u, b);
+  $('al').innerHTML = '<tr><th>Start</th><th>Hours</th><th>Block</th><th>Utility</th><th>Extra use</th><th>Suggested action</th><th></th></tr>' + (alerts.length ? alerts.map((a, i) => `<tr class="${done[key(a)] ? 'done' : ''}"><td>${a.startTs.replace('T', ' ')}</td><td>${a.end - a.start + 1}</td><td>${a.block}</td><td>${U[a.util][0]}</td><td>${a.extra} ${U[a.util][1]}</td><td>${a.action}</td><td><button onclick="tog(${i})">${done[key(a)] ? 'Reopen' : 'Resolve'}</button></td></tr>`).join('') : '<tr><td colspan="7">No alerts.</td></tr>');
+  if (sim) {
+    const e = Engine.evaluate(alerts);
+    $('ev').style.display = '';
+    $('ev').innerHTML = `<h2>Check against injected faults (simulated data only)</h2><p>${e.caught} of ${e.total} injected faults caught, ${e.falseAlerts} extra alerts.</p><table><tr><th>Injected fault</th><th>Block</th><th>Day</th><th>Caught?</th></tr>${e.faults.map(f => `<tr><td>${f.label}</td><td>${f.block}</td><td>${f.day}</td><td>${f.caught ? 'Yes' : 'No'}</td></tr>`).join('')}</table>`;
+  } else $('ev').style.display = 'none';
+}
+function tog(i) { const k = key(alerts[i]); done[k] = !done[k]; render(); }
+$('blk').onchange = $('utl').onchange = render;
+$('regen').onclick = () => load(Engine.generate(Math.floor(Math.random() * 1e6)), true);
+$('file').onchange = ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { const p = Engine.parseCSV(r.result); p.length ? load(p, false) : alert('Could not read this CSV. Expected columns: timestamp,block,electricity_kwh,water_litres'); };
+  r.readAsText(f);
+};
+load(Engine.generate(7), true);
+</script></body></html>
