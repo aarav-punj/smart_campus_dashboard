@@ -1,5 +1,5 @@
 // Smart-Campus Dashboard: data generator, CSV parser and exporter.
-// Authored by Pankaj
+// Authored by Aarav (rules, evaluation) and Pankaj (generator, CSV)
 (function (root) {
   function rng(a) { 
     return function () { 
@@ -60,6 +60,52 @@
     return rows;
   }
 
+  function med(a) { var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
+  function action(a) {
+    var h = +a.startTs.slice(11, 13);
+    if (a.util === 'w') return (a.rule === 'night' ? 'Water flowing at night: possible leak or overflow. Check pipes, taps and the overhead tank in ' : 'Unusually high water use: check for a burst pipe, running tap or tank overflow in ') + a.block + '.';
+    return (h < 6 || h >= 22 ? 'High electricity use after hours: check AC, lights and lab equipment left on in ' : 'Unusual electricity spike: check for a faulty or overloaded appliance in ') + a.block + '.';
+  }
+  // Rule 1 (night flow): water at 01:00-05:59 far above that block's normal night flow.
+  // Rule 2 (spike): any reading above 1.8x the median of the same hour over the previous days (+ a small margin).
+  // Needs complete hourly data per block, sorted by time.
+  function detect(rows) {
+    var by = {}, alerts = [];
+    rows.forEach(function (x) { (by[x.block] = by[x.block] || []).push(x); });
+    Object.keys(by).forEach(function (name) {
+      var s = by[name].slice().sort(function (a, b) { return a.ts < b.ts ? -1 : 1; });
+      var night = med(s.filter(function (x) { var h = +x.ts.slice(11, 13); return h >= 1 && h <= 5; }).map(function (x) { return x.w; }));
+      var flags = [];
+      s.forEach(function (x, i) {
+        var h = +x.ts.slice(11, 13);
+        ['w', 'e'].forEach(function (u) {
+          if (u === 'w' && h >= 1 && h <= 5 && x.w > Math.max(3 * night, night + 60)) { flags.push({ u: u, i: i, rule: 'night', base: night, v: x.w }); return; }
+          var prev = [];
+          for (var k = 1; k <= 7; k++) if (i - 24 * k >= 0) prev.push(s[i - 24 * k][u]);
+          if (prev.length < 3) return;
+          var m = med(prev);
+          if (x[u] > 1.8 * m + (u === 'w' ? 50 : 10)) flags.push({ u: u, i: i, rule: 'spike', base: m, v: x[u] });
+        });
+      });
+      ['w', 'e'].forEach(function (u) {
+        var cur = null;
+        flags.filter(function (x) { return x.u === u; }).forEach(function (x) {
+          if (cur && x.i === cur.end + 1) { cur.end = x.i; cur.extra += x.v - x.base; if (x.rule === 'night') cur.rule = 'night'; }
+          else { cur = { block: name, util: u, start: x.i, end: x.i, startTs: s[x.i].ts, rule: x.rule, extra: x.v - x.base }; alerts.push(cur); }
+        });
+      });
+      alerts.forEach(function (a) { if (a.block === name) a.endTs = s[a.end].ts; });
+    });
+    alerts.forEach(function (a) { a.extra = Math.round(a.extra * 10) / 10; a.action = action(a); });
+    return alerts.sort(function (a, b) { return a.startTs < b.startTs ? -1 : 1; });
+  }
+  function hit(a, f) { return a.block === f.block && a.util === f.util && a.start <= f.day * 24 + f.h1 && a.end >= f.day * 24 + f.h0; }
+  function evaluate(alerts) {
+    var res = FAULTS.map(function (f) { return { label: f.label, block: f.block, util: f.util, day: f.day + 1, caught: alerts.some(function (a) { return hit(a, f); }) }; });
+    return { faults: res, total: FAULTS.length, caught: res.filter(function (x) { return x.caught; }).length,
+      falseAlerts: alerts.filter(function (a) { return !FAULTS.some(function (f) { return hit(a, f); }); }).length };
+  }
+
   function toCSV(rows) { 
     return 'timestamp,block,electricity_kwh,water_litres\n' + 
       rows.map(function (r) { return [r.ts, r.block, r.e, r.w].join(','); }).join('\n') + '\n'; 
@@ -74,12 +120,7 @@
     });
   }
 
-  var API = { 
-    generate: generate, 
-    toCSV: toCSV, 
-    parseCSV: parseCSV, 
-    FAULTS: FAULTS 
-  };
+  var API = { generate: generate, detect: detect, evaluate: evaluate, toCSV: toCSV, parseCSV: parseCSV, FAULTS: FAULTS };
 
   if (typeof module !== 'undefined') module.exports = API; 
   else root.Engine = API;
