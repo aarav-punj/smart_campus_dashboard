@@ -22,9 +22,6 @@ Download or clone the repo and open `index.html` in a browser. No install needed
 2. **Spike rule:** any reading above 1.8x the median of the same hour over the previous days (plus a small margin) is flagged.
 3. Consecutive flagged hours are merged into one alert with the extra use and a plain-language suggested action.
 
-## Use your own data
-Upload a CSV with the header `timestamp,block,electricity_kwh,water_litres`, one row per block per hour, complete and sorted (see `data/sample_readings.csv`).
-
 ## Limitations
 - Runs in the browser only: no database or server yet, and alert status resets on reload.
 - Rules are fixed thresholds; they have only been tested on simulated data.
