@@ -5,7 +5,7 @@ Course project for 2026CSAE102 Technology and Sustainability, Bennett University
 A browser dashboard that shows hourly electricity and water use per campus block and raises alerts with suggested actions when readings look wrong (for example, water flowing at 3 AM).
 
 ## Run it
-Download or clone the repo and open `index.html` in a browser. No install needed. (Live demo link: _add GitHub Pages link here_)
+Download or clone the repo and open `index.html` in a browser. No install needed. (Live demo link: https://aarav-punj.github.io/smart_campus_dashboard/)
 
 ## Files
 | File | Purpose |
