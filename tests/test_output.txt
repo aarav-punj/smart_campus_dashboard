@@ -1,0 +1,9 @@
+Default sample (seed 7): 1008 hourly rows, 5 alerts
+  CAUGHT  Night water leak | Hostel B | day 5
+  CAUGHT  Tank overflow at night | Hostel A | day 9
+  CAUGHT  Equipment left on overnight | Academic Block | day 10
+  CAUGHT  Afternoon power spike | Hostel B | day 12
+  CAUGHT  Night water leak | Academic Block | day 11
+Caught 5/5, extra (false) alerts: 0
+
+Robustness over 200 random seeds: 1000/1000 faults caught (100.0%), 0 false alerts total, 200/200 runs perfect
