@@ -53,8 +53,9 @@ An AI assistant (Claude) helped draft early versions of the modular code structu
 
 | Member | ID | Role | Key Deliverables |
 |---|---|---|---|
-| **Aarav Punj** | S26CSEU3304 | Lead, Rule Engine Architect | Anomaly rules, alert merging, repo coordination, documentation |
-| **Devansh Jha** | S26CSEU3323 | Frontend UI & Visualizations | Dashboard layout, dynamic SVG graphs, GitHub Pages deployment |
-| **Pankaj Biswal** | S26CSEU3318 | Data Engineering & Simulation | Synthetic telemetry generator, CSV parser, baseline dataset |
-| **Shobhit Pandey** | S26CSEU3246 | QA & Automated Testing | Test harness, fault injection verification, 200-seed test run |
-| **Md Raiyyan Ali** | S26CSEU3287 | Architecture, BMC & Media | Architecture/workflow diagrams, Business Model Canvas, video |
+| **Aarav Punj** | S26CSEU3304 | Lead, Rule Engine | Night-flow & spike-vs-baseline rules, alert merging, repo setup, README, GitHub Pages |
+| **Devansh Jha** | S26CSEU3323 | Frontend UI & Visualization | Dashboard layout, SVG charts, alerts table, CSV upload |
+| **Pankaj Biswal** | S26CSEU3318 | Data Engineering & Simulation | Synthetic data generator, CSV parsing, baseline sample dataset |
+| **Shobhit Pandey** | S26CSEU3246 | QA & Automated Testing | Test runner, fault-injection checks, 200-seed robustness run |
+| **Md Raiyyan Ali** | S26CSEU3287 | Architecture & Video Co-Lead | Architecture, alert workflow & dashboard wireframe diagrams, 90–150 s progress video |
+| **Anshika Lenka** | S26CSEU2875 | BMC & Video Co-Lead | Business Model Canvas (`BMC.md`), progress video script preparation and narration |
